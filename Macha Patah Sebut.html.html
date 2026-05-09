@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Permainan Sebutan: Pengidup Aku</title>
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --bg-sky: #87CEEB;
+            --road-color: #555;
+            --text-dark: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f8ff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+
+        #game-header {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 20px;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: var(--text-dark);
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 600px;
+            height: 300px;
+            background: linear-gradient(to bottom, var(--bg-sky) 60%, #8fbc8f 60%, #8fbc8f 70%, var(--road-color) 70%, var(--road-color) 100%);
+            position: relative;
+            overflow: hidden;
+            border-bottom: 5px solid #333;
+        }
+
+        /* City Skyline Background */
+        .city-bg {
+            position: absolute;
+            bottom: 30%;
+            width: 200%;
+            height: 50%;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect x="10" y="40" width="20" height="60" fill="%23ccc"/><rect x="35" y="20" width="30" height="80" fill="%23bbb"/><rect x="70" y="50" width="20" height="50" fill="%23ddd"/></svg>');
+            background-size: 150px 100%;
+            background-repeat: repeat-x;
+            opacity: 0.6;
+            z-index: 1;
+        }
+
+        /* Car Design facing right */
+        #car {
+            position: absolute;
+            bottom: 10%;
+            left: -80px; /* Start off-screen */
+            width: 80px;
+            height: 40px;
+            z-index: 10;
+            transition: left 1s ease-in-out, transform 0.2s;
+        }
+        .car-body {
+            position: absolute;
+            bottom: 10px;
+            width: 80px;
+            height: 25px;
+            background-color: #ff4757;
+            border-radius: 5px 15px 0 0;
+        }
+        .car-top {
+            position: absolute;
+            bottom: 35px;
+            left: 15px;
+            width: 40px;
+            height: 20px;
+            background-color: #ff4757;
+            border-radius: 10px 15px 0 0;
+        }
+        .car-window {
+            position: absolute;
+            bottom: 35px;
+            left: 30px;
+            width: 20px;
+            height: 15px;
+            background-color: #87CEEB;
+            border-radius: 0 10px 0 0;
+        }
+        .wheel {
+            position: absolute;
+            bottom: 0;
+            width: 20px;
+            height: 20px;
+            background-color: #2f3542;
+            border-radius: 50%;
+            border: 2px solid #f1f2f6;
+        }
+        .wheel-left { left: 10px; }
+        .wheel-right { right: 10px; }
+
+        /* Obstacle */
+        #obstacle {
+            position: absolute;
+            bottom: 10%;
+            left: 60%;
+            font-size: 3rem;
+            z-index: 5;
+            transition: opacity 0.5s;
+        }
+
+        /* UI Panel */
+        #ui-panel {
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+            background: #fff;
+            box-sizing: border-box;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 250px;
+        }
+
+        #sentence-display {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        #status-msg {
+            min-height: 24px;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+            font-size: 1rem;
+        }
+
+        /* Giant Mic Button */
+        #mic-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 100px;
+            height: 100px;
+            font-size: 3rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4);
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.3s;
+            margin-bottom: 20px;
+        }
+
+        #mic-btn:active {
+            transform: scale(0.95);
+        }
+
+        #mic-btn.listening {
+            background-color: #e74c3c;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(231, 76, 60, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+        }
+
+        /* Car Crash Animation */
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-10px) rotate(-5deg); }
+            50% { transform: translateX(10px) rotate(5deg); }
+            75% { transform: translateX(-10px) rotate(-5deg); }
+            100% { transform: translateX(0); }
+        }
+
+        .shake-animation {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        /* Next Button */
+        #next-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            border-radius: 30px;
+            cursor: pointer;
+            display: none;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(76, 175, 80, 0.4);
+        }
+
+        #next-btn:hover {
+            background-color: #45a049;
+        }
+        
+        #overlay {
+            position: fixed;
+            top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        #overlay button {
+            margin-top: 20px;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="overlay">
+        <h2>Permainan Sebutan</h2>
+        <p>Topik: Pengidup Aku</p>
+        <button id="start-game-btn">Mula Bermain & Benarkan Mikrofon</button>
+    </div>
+
+    <div id="game-header">
+        <span id="level-display">Tahap: 1 / 10</span>
+        <span id="score-display">Markah: 0</span>
+    </div>
+
+    <div id="game-container">
+        <div class="city-bg"></div>
+        <div id="car">
+            <div class="car-top"></div>
+            <div class="car-window"></div>
+            <div class="car-body"></div>
+            <div class="wheel wheel-left"></div>
+            <div class="wheel wheel-right"></div>
+        </div>
+        <div id="obstacle">🚧</div>
+    </div>
+
+    <div id="ui-panel">
+        <div id="sentence-display">
+            <span id="icon-display"></span>
+            <span id="text-display">Sila tekan mula...</span>
+        </div>
+        <div id="status-msg"></div>
+        
+        <button id="mic-btn" aria-label="Bercakap">🎤</button>
+        <button id="next-btn">Tahap Seterusnya ➡️</button>
+    </div>
+
+    <script>
+        // --- DATA PERMAINAN ---
+        const gameData = [
+            { text: "Tu kedai Apai Injan.", icon: "🏪" },
+            { text: "Apai Injan nanjah sayur.", icon: "🥬" },
+            { text: "Tumu pagi nurun sekula.", icon: "🎒" },
+            { text: "Pengajar ngajar kami di sekula.", icon: "👨‍🏫" },
+            { text: "Injan macha bup.", icon: "📖" },
+            { text: "Kelas kami beresi.", icon: "✨" },
+            { text: "Kami gaga ati nurun ke sekula.", icon: "😄" },
+            { text: "Indai manduk bekal ke kami.", icon: "🍱" },
+            { text: "Apai nurun kerja tumu pagi.", icon: "💼" },
+            { text: "Injan rindu nulis.", icon: "✏️" }
+        ];
+
+        // --- PEMBOLEH UBAH SISTEM ---
+        let currentLevel = 0;
+        let score = 0;
+        let recognition = null;
+        let isListening = false;
+        let audioCtx = null;
+
+        // --- ELEMEN DOM ---
+        const carEl = document.getElementById('car');
+        const obstacleEl = document.getElementById('obstacle');
+        const micBtn = document.getElementById('mic-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const statusMsg = document.getElementById('status-msg');
+        const textDisplay = document.getElementById('text-display');
+        const iconDisplay = document.getElementById('icon-display');
+        const levelDisplay = document.getElementById('level-display');
+        const scoreDisplay = document.getElementById('score-display');
+        const overlay = document.getElementById('overlay');
+        const startGameBtn = document.getElementById('start-game-btn');
+
+        // --- SISTEM AUDIO (SFX) ---
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playTone(freq, type, duration, vol=0.1) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.value = freq;
+            
+            gainNode.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+            
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function playSuccessSound() {
+            playTone(523.25, 'sine', 0.1); // C5
+            setTimeout(() => playTone(659.25, 'sine', 0.2), 100); // E5
+        }
+
+        function playCrashSound() {
+            playTone(150, 'sawtooth', 0.3, 0.2); // Low buzz
+        }
+
+        // --- ALGORITMA PERSAMAAN (Levenshtein Distance untuk toleransi 75-90%) ---
+        function getSimilarity(s1, s2) {
+            s1 = s1.toLowerCase().replace(/[^a-z0-9]/g, '');
+            s2 = s2.toLowerCase().replace(/[^a-z0-9]/g, '');
+            
+            let longer = s1;
+            let shorter = s2;
+            if (s1.length < s2.length) { longer = s2; shorter = s1; }
+            let longerLength = longer.length;
+            if (longerLength == 0) return 1.0;
+            
+            let costs = new Array();
+            for (let i = 0; i <= longer.length; i++) {
+                let lastValue = i;
+                for (let j = 0; j <= shorter.length; j++) {
+                    if (i == 0) costs[j] = j;
+                    else {
+                        if (j > 0) {
+                            let newValue = costs[j - 1];
+                            if (longer.charAt(i - 1) != shorter.charAt(j - 1))
+                                newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+                            costs[j - 1] = lastValue;
+                            lastValue = newValue;
+                        }
+                    }
+                }
+                if (i > 0) costs[shorter.length] = lastValue;
+            }
+            return (longerLength - costs[shorter.length]) / parseFloat(longerLength);
+        }
+
+        // --- PERSIAPAN PERMAINAN ---
+        function setupSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("Pelayar ini tidak menyokong pengecaman suara. Sila gunakan Google Chrome.");
+                micBtn.disabled = true;
+                return false;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.lang = "ms-MY"; // Paling dekat untuk sokongan Iban
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onstart = function() {
+                isListening = true;
+                micBtn.classList.add('listening');
+                statusMsg.textContent = "Sedang mendengar... Sebut ayat di atas.";
+            };
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                checkAnswer(transcript);
+            };
+
+            recognition.onerror = function(event) {
+                console.error("Speech error: ", event.error);
+                micBtn.classList.remove('listening');
+                isListening = false;
+                statusMsg.textContent = "Nyawa enda didinga . Cuba baru.";
+            };
+
+            recognition.onend = function() {
+                micBtn.classList.remove('listening');
+                isListening = false;
+                if(statusMsg.textContent === "Sedang mendengar... Sebut ayat di atas.") {
+                    statusMsg.textContent = "Sila tekan mikrofon untuk mencuba lagi.";
+                }
+            };
+            
+            return true;
+        }
+
+        // --- KAWALAN PERMAINAN ---
+        function loadLevel() {
+            if (currentLevel >= gameData.length) {
+                endGame();
+                return;
+            }
+
+            // Reset UI
+            nextBtn.style.display = 'none';
+            micBtn.style.display = 'flex';
+            statusMsg.textContent = "Tekan mikrofon dan sebut ayat ini.";
+            
+            // Kemaskini Data
+            levelDisplay.textContent = `Tahap: ${currentLevel + 1} / ${gameData.length}`;
+            textDisplay.textContent = gameData[currentLevel].text;
+            iconDisplay.textContent = gameData[currentLevel].icon;
+
+            // Animasi Kereta
+            carEl.style.left = '-80px'; // Reset posisi ke kiri
+            obstacleEl.style.opacity = '1';
+            
+            setTimeout(() => {
+                // Kereta bergerak dan berhenti di depan halangan
+                carEl.style.left = '35%'; 
+            }, 100);
+        }
+
+        function checkAnswer(transcript) {
+            const targetSentence = gameData[currentLevel].text;
+            const similarity = getSimilarity(transcript, targetSentence);
+            
+            console.log("Sebut:", transcript);
+            console.log("Sasaran:", targetSentence);
+            console.log("Ketepatan:", (similarity * 100).toFixed(2) + "%");
+
+            // Toleransi >= 70% diterima
+            if (similarity >= 0.70) {
+                passObstacle();
+            } else {
+                failObstacle(transcript);
+            }
+        }
+
+        function passObstacle() {
+            playSuccessSound();
+            statusMsg.textContent = "Bagus! Sebutan betul.";
+            statusMsg.style.color = "var(--primary-color)";
+            
+            score += 10;
+            scoreDisplay.textContent = `Markah: ${score}`;
+
+            micBtn.style.display = 'none';
+            nextBtn.style.display = 'inline-block';
+
+            // Animasi melepasi halangan
+            obstacleEl.style.opacity = '0';
+            carEl.style.left = '100%'; // Kereta terus ke kanan
+        }
+
+        function failObstacle(transcript) {
+            playCrashSound();
+            statusMsg.innerHTML = `Kurang tepat. (Anda sebut: <i>${transcript}</i>)<br>Nyawa enda didinga . Cuba baru.`;
+            statusMsg.style.color = "#e74c3c";
+
+            // Animasi langgar (gegar)
+            carEl.classList.add('shake-animation');
+            setTimeout(() => {
+                carEl.classList.remove('shake-animation');
+            }, 400);
+        }
+
+        function endGame() {
+            textDisplay.textContent = "Tahniah! Anda telah tamat permainan.";
+            iconDisplay.textContent = "🎉";
+            statusMsg.textContent = `Markah Akhir Anda: ${score}`;
+            micBtn.style.display = 'none';
+            nextBtn.style.display = 'none';
+            carEl.style.left = '50%'; // Kereta di tengah
+            obstacleEl.style.display = 'none';
+        }
+
+        // --- ACARA (EVENTS) ---
+        startGameBtn.addEventListener('click', () => {
+            // Minta akses mikrofon
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(function(stream) {
+                    // Akses diberikan
+                    initAudio();
+                    if(setupSpeechRecognition()) {
+                        overlay.style.display = 'none';
+                        loadLevel();
+                    }
+                    // Hentikan stream serta merta kerana kita guna SpeechRecognition API, bukan perakam manual
+                    stream.getTracks().forEach(track => track.stop());
+                })
+                .catch(function(err) {
+                    alert("Sila benarkan akses mikrofon untuk bermain permainan ini.");
+                });
+        });
+
+        micBtn.addEventListener('click', () => {
+            initAudio(); // Pastikan audio aktif di iOS
+            if (isListening) {
+                recognition.stop();
+            } else {
+                statusMsg.style.color = "#7f8c8d";
+                try {
+                    recognition.start();
+                } catch(e) {
+                    console.error("Recognition already started");
+                }
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            currentLevel++;
+            loadLevel();
+        });
+
+    </script>
+</body>
+</html>
